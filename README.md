@@ -1,7 +1,6 @@
-# GitHub Action to Sync S3 Bucket 🔄
+# GitHub Action to Sync S3 Bucket & Invalidate a Cloudfront Distribution 🔄
 
-This simple action uses the [vanilla AWS CLI](https://docs.aws.amazon.com/cli/index.html) to sync a directory (either from your repository or generated during your workflow) with a remote S3 bucket.
-
+This simple action uses the [vanilla AWS CLI](https://docs.aws.amazon.com/cli/index.html) to sync a directory (either from your repository or generated during your workflow) with a remote S3 bucket.  After the sync, the same profile invalidates a cloudfront distribution.  This is a common pattern when an S3 bucket is the origin for the corresponding distribution.
 
 ## Usage
 
@@ -9,7 +8,7 @@ This simple action uses the [vanilla AWS CLI](https://docs.aws.amazon.com/cli/in
 
 Place in a `.yml` file such as this one in your `.github/workflows` folder. [Refer to the documentation on workflow YAML syntax here.](https://help.github.com/en/articles/workflow-syntax-for-github-actions)
 
-As of v0.3.0, all [`aws s3 sync` flags](https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html) are optional to allow for maximum customizability (that's a word, I promise) and must be provided by you via `args:`.
+As of v0.1.1, all [`aws s3 sync` flags](https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html) are optional and must be provided by you via `args:`.
 
 #### The following example includes optimal defaults for a public static website:
 
@@ -19,7 +18,7 @@ As of v0.3.0, all [`aws s3 sync` flags](https://docs.aws.amazon.com/cli/latest/r
 - **Optional tip:** If you're uploading the root of your repository, adding `--exclude '.git/*'` prevents your `.git` folder from syncing, which would expose your source code history if your project is closed-source. (To exclude more than one pattern, you must have one `--exclude` flag per exclusion. The single quotes are also important!)
 
 ```yaml
-name: Upload Website
+name: Upload Website & Invalidate
 
 on:
   push:
@@ -31,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: jakejarvis/s3-sync-action@master
+    - uses: digital-scarcity/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks --delete
       env:
@@ -40,6 +39,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'us-west-1'   # optional: defaults to us-east-1
         SOURCE_DIR: 'public'      # optional: defaults to entire repository
+        AWS_DISTRIBUTION_ID: ${{ secrets.AWS_DISTRIBUTION_ID }}
 ```
 
 
@@ -56,6 +56,7 @@ The following settings must be passed as environment variables as shown in the e
 | `AWS_S3_ENDPOINT` | The endpoint URL of the bucket you're syncing to. Can be used for [VPC scenarios](https://aws.amazon.com/blogs/aws/new-vpc-endpoint-for-amazon-s3/) or for non-AWS services using the S3 API, like [DigitalOcean Spaces](https://www.digitalocean.com/community/tools/adapting-an-existing-aws-s3-application-to-digitalocean-spaces). | `env` | No | Automatic (`s3.amazonaws.com` or AWS's region-specific equivalent) |
 | `SOURCE_DIR` | The local directory (or file) you wish to sync/upload to S3. For example, `public`. Defaults to your entire repository. | `env` | No | `./` (root of cloned repository) |
 | `DEST_DIR` | The directory inside of the S3 bucket you wish to sync/upload to. For example, `my_project/assets`. Defaults to the root of the bucket. | `env` | No | `/` (root of bucket) |
+| `AWS_DISTRIBUTION_ID` | The distribution ID found in the Cloudfront section of AWS Console | `env` | **Yes** | N/A |
 
 
 ## License
